@@ -37,16 +37,29 @@ function CandidateCell({
   );
 }
 
+function DeleteButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="ml-3 whitespace-nowrap text-xs text-zinc-400 underline-offset-2 hover:text-red-500 hover:underline dark:text-zinc-500 dark:hover:text-red-400"
+    >
+      削除する
+    </button>
+  );
+}
+
 function EntryRow({
   entry,
   confirmed,
   onConfirm,
   onUnconfirm,
+  onDelete,
 }: {
   entry: PDFEntry;
   confirmed: ConfirmedEntry | undefined;
   onConfirm: (data: ConfirmedEntry) => void;
   onUnconfirm: () => void;
+  onDelete: () => void;
 }) {
   const [selected, setSelected] = useState<Record<FieldKey, string | null>>({
     paymentDate: null,
@@ -74,7 +87,7 @@ function EntryRow({
     return (
       <tr className="border-b border-zinc-100 dark:border-zinc-800">
         {fileNameCell}
-        <td colSpan={FIELDS.length + 1} className="py-3 text-sm text-zinc-400">
+        <td colSpan={FIELDS.length} className="py-3 text-sm text-zinc-400">
           <span className="flex items-center gap-2">
             <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -82,6 +95,9 @@ function EntryRow({
             </svg>
             解析中...
           </span>
+        </td>
+        <td className="py-3 pl-4 pr-4 text-right">
+          <DeleteButton onClick={onDelete} />
         </td>
       </tr>
     );
@@ -91,8 +107,11 @@ function EntryRow({
     return (
       <tr className="border-b border-zinc-100 dark:border-zinc-800">
         {fileNameCell}
-        <td colSpan={FIELDS.length + 1} className="py-3 text-sm text-red-600 dark:text-red-400">
+        <td colSpan={FIELDS.length} className="py-3 text-sm text-red-600 dark:text-red-400">
           {entry.error ?? "エラーが発生しました"}
+        </td>
+        <td className="py-3 pl-4 pr-4 text-right">
+          <DeleteButton onClick={onDelete} />
         </td>
       </tr>
     );
@@ -114,6 +133,7 @@ function EntryRow({
           >
             変更する
           </button>
+          <DeleteButton onClick={onDelete} />
         </td>
       </tr>
     );
@@ -146,6 +166,7 @@ function EntryRow({
         >
           決定
         </button>
+        <DeleteButton onClick={onDelete} />
       </td>
     </tr>
   );
@@ -245,6 +266,10 @@ export function ResultsTable() {
                 confirmed={confirmedMap[entry.id]}
                 onConfirm={confirm}
                 onUnconfirm={() => unconfirm(entry.id)}
+                onDelete={() => {
+                  setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+                  unconfirm(entry.id);
+                }}
               />
             ))}
           </tbody>
