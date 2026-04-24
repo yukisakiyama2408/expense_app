@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { extractExpenseFromAzure, ActionState } from "@/app/actions";
+import { extractExpenseFromPDF, ActionState, ExtractedExpenseCandidates } from "@/app/actions";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -15,24 +15,9 @@ function SubmitButton() {
     >
       {pending ? (
         <span className="flex items-center gap-2">
-          <svg
-            className="h-4 w-4 animate-spin"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
           解析中...
         </span>
@@ -43,33 +28,85 @@ function SubmitButton() {
   );
 }
 
-function ResultCard({ data }: { data: NonNullable<ActionState["data"]> }) {
-  const rows = [
-    { label: "支払日", value: data.paymentDate },
-    { label: "支払い先", value: data.paymentDestination },
-    { label: "金額", value: data.amount },
+type FieldKey = "paymentDate" | "paymentDestination" | "amount";
+
+function CandidateField({
+  label,
+  candidates,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  candidates: string[];
+  selected: string | null;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <div className="border-b border-zinc-100 pb-4 last:border-0 last:pb-0 dark:border-zinc-800">
+      <dt className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">{label}</dt>
+      <dd>
+        {candidates.length === 0 ? (
+          <span className="text-sm text-zinc-400">不明</span>
+        ) : candidates.length === 1 ? (
+          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{candidates[0]}</span>
+        ) : (
+          <div className="space-y-1">
+            {candidates.map((candidate) => (
+              <label
+                key={candidate}
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              >
+                <input
+                  type="radio"
+                  name={label}
+                  value={candidate}
+                  checked={selected === candidate}
+                  onChange={() => onSelect(candidate)}
+                  className="accent-zinc-900 dark:accent-zinc-50"
+                />
+                <span className="text-sm text-zinc-900 dark:text-zinc-50">{candidate}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+function CandidateSelector({ candidates }: { candidates: ExtractedExpenseCandidates }) {
+  const [selected, setSelected] = useState<Record<FieldKey, string | null>>({
+    paymentDate: candidates.paymentDate[0] ?? null,
+    paymentDestination: candidates.paymentDestination[0] ?? null,
+    amount: candidates.amount[0] ?? null,
+  });
+
+  useEffect(() => {
+    setSelected({
+      paymentDate: candidates.paymentDate[0] ?? null,
+      paymentDestination: candidates.paymentDestination[0] ?? null,
+      amount: candidates.amount[0] ?? null,
+    });
+  }, [candidates]);
+
+  const fields: { key: FieldKey; label: string }[] = [
+    { key: "paymentDate", label: "支払日" },
+    { key: "paymentDestination", label: "支払い先" },
+    { key: "amount", label: "金額" },
   ];
 
   return (
     <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-        抽出結果
-      </h2>
-      <dl className="space-y-3">
-        {rows.map(({ label, value }) => (
-          <div
-            key={label}
-            className="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 last:border-0 last:pb-0 dark:border-zinc-800"
-          >
-            <dt className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              {label}
-            </dt>
-            <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              {value ?? (
-                <span className="font-normal text-zinc-400">不明</span>
-              )}
-            </dd>
-          </div>
+      <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">抽出結果</h2>
+      <dl className="space-y-4">
+        {fields.map(({ key, label }) => (
+          <CandidateField
+            key={key}
+            label={label}
+            candidates={candidates[key]}
+            selected={selected[key]}
+            onSelect={(value) => setSelected((prev) => ({ ...prev, [key]: value }))}
+          />
         ))}
       </dl>
     </div>
@@ -78,7 +115,7 @@ function ResultCard({ data }: { data: NonNullable<ActionState["data"]> }) {
 
 export function UploadForm() {
   const [state, action] = useActionState<ActionState | null, FormData>(
-    extractExpenseFromAzure,
+    extractExpenseFromPDF,
     null
   );
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -110,25 +147,21 @@ export function UploadForm() {
           <div>
             {selectedFile ? (
               <>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                  {selectedFile}
-                </p>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{selectedFile}</p>
                 <p className="mt-1 text-xs text-zinc-500">クリックしてファイルを変更</p>
               </>
             ) : (
               <>
-                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  クリックしてファイルを選択
-                </p>
-                <p className="mt-1 text-xs text-zinc-500">PDF・JPEG・PNG・TIFF・BMP 対応</p>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">クリックしてファイルを選択</p>
+                <p className="mt-1 text-xs text-zinc-500">PDF 対応</p>
               </>
             )}
           </div>
           <input
             id="pdf-input"
             type="file"
-            name="file"
-            accept=".pdf,application/pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,image/jpeg,image/png,image/tiff,image/bmp"
+            name="pdf"
+            accept=".pdf,application/pdf"
             required
             className="sr-only"
             onChange={(e) => setSelectedFile(e.target.files?.[0]?.name ?? null)}
@@ -144,7 +177,9 @@ export function UploadForm() {
         </div>
       )}
 
-      {state?.success && state.data && <ResultCard data={state.data} />}
+      {state?.success && state.candidates && (
+        <CandidateSelector candidates={state.candidates} />
+      )}
 
       {state?.success && state.rawText && (
         <details className="mt-4">

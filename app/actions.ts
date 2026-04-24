@@ -1,98 +1,88 @@
 "use server";
 
-export interface ExtractedExpense {
-  paymentDate: string | null;
-  paymentDestination: string | null;
-  amount: string | null;
+export interface ExtractedExpenseCandidates {
+  paymentDate: string[];
+  paymentDestination: string[];
+  amount: string[];
 }
 
 export interface ActionState {
   success: boolean;
-  data?: ExtractedExpense;
+  candidates?: ExtractedExpenseCandidates;
   rawText?: string;
   error?: string;
 }
 
-function parseExpenseFromText(rawText: string): ExtractedExpense {
-  // PDFから抽出されるKangxi部首互換文字（⽇⽉⼊ 等）を標準CJKに正規化
+function parseExpenseFromText(rawText: string): ExtractedExpenseCandidates {
   const text = rawText.normalize("NFKC");
 
-  // 日付抽出: 支払日・決済日・購入日 等のラベル近傍の日付を優先、なければ最初の日付
-  let paymentDate: string | null = null;
-
-  type DatePattern = { re: RegExp; toIso: (m: RegExpMatchArray) => string };
-  const toIsoReiwa = (m: RegExpMatchArray) => {
+  // --- 日付 ---
+  type ToIso = (m: RegExpMatchArray) => string;
+  const toIsoReiwa: ToIso = (m) => {
     const year = 2018 + parseInt(m[1]);
     return `${year}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
   };
-  const datePatterns: DatePattern[] = [
+  const datePatternDefs: { source: string; toIso: ToIso }[] = [
+    { source: /令和\s*(\d+)\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/.source, toIso: toIsoReiwa },
     {
-      re: /令和\s*(\d+)\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
-      toIso: toIsoReiwa,
-    },
-    {
-      re: /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
+      source: /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/.source,
       toIso: (m) => `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`,
     },
     {
-      re: /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?!\s*\d{2}:\d{2})/,
+      source: /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?!\s*\d{2}:\d{2})/.source,
       toIso: (m) => `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`,
     },
   ];
 
-  const findDateIn = (s: string): string | null => {
-    for (const { re, toIso } of datePatterns) {
-      const m = s.match(re);
-      if (m) return toIso(m);
-    }
-    return null;
+  const seenDates = new Set<string>();
+  const paymentDate: string[] = [];
+  const addDate = (iso: string) => {
+    if (!seenDates.has(iso)) { seenDates.add(iso); paymentDate.push(iso); }
   };
 
-  // 支払い関連ラベルが含まれる行から前後2行のウィンドウ内で日付を探す
+  // 支払い関連ラベル近傍の日付を優先
   const paymentLabelRe = /支払[いい]?日|決済日|購入日|取引日|領収日/;
   const textLines = text.split("\n").map((l) => l.trim());
-  for (let i = 0; i < textLines.length && !paymentDate; i++) {
+  for (let i = 0; i < textLines.length; i++) {
     if (paymentLabelRe.test(textLines[i])) {
       const window = textLines.slice(i, i + 3).join(" ");
-      paymentDate = findDateIn(window);
+      for (const { source, toIso } of datePatternDefs) {
+        for (const m of window.matchAll(new RegExp(source, "g"))) addDate(toIso(m));
+      }
     }
   }
 
-  // ラベル付き日付が見つからなければ全体から最初の日付にフォールバック
-  if (!paymentDate) {
-    paymentDate = findDateIn(text);
+  // 全体から残りの日付を収集
+  for (const { source, toIso } of datePatternDefs) {
+    for (const m of text.matchAll(new RegExp(source, "g"))) addDate(toIso(m));
   }
 
-  // 金額抽出: 合計/total を優先、次に最大の金額
-  let amount: string | null = null;
-  const totalMatch = text.match(
-    /(?:合計|小計|お買上|ご請求|total)[金額]?\s*[¥￥]?\s*([\d,]+)\s*円?/i
-  );
-  if (totalMatch) {
-    amount = `¥${totalMatch[1]}`;
-  } else {
-    // ¥xxx または xxxxx円 のうち最大値を採用
-    const allAmounts: number[] = [];
-    for (const m of text.matchAll(/[¥￥]\s*([\d,]+)/g)) {
-      allAmounts.push(parseInt(m[1].replace(/,/g, "")));
+  // --- 金額 ---
+  const seenAmounts = new Set<number>();
+  const amount: string[] = [];
+  const addAmount = (n: number) => {
+    if (Number.isFinite(n) && n > 0 && !seenAmounts.has(n)) {
+      seenAmounts.add(n);
+      amount.push(`¥${n.toLocaleString()}`);
     }
-    for (const m of text.matchAll(/([\d,]+)\s*円/g)) {
-      allAmounts.push(parseInt(m[1].replace(/,/g, "")));
-    }
-    if (allAmounts.length > 0) {
-      const max = Math.max(...allAmounts);
-      amount = `¥${max.toLocaleString()}`;
-    }
+  };
+
+  // 合計/total ラベル付き金額を優先
+  for (const m of text.matchAll(/(?:合計|小計|お買上|ご請求|total)[金額]?\s*[¥￥]?\s*([\d,]+)\s*円?/gi)) {
+    addAmount(parseInt(m[1].replace(/,/g, "")));
+  }
+  for (const m of text.matchAll(/[¥￥]\s*([\d,]+)/g)) {
+    addAmount(parseInt(m[1].replace(/,/g, "")));
+  }
+  for (const m of text.matchAll(/([\d,]+)\s*円/g)) {
+    addAmount(parseInt(m[1].replace(/,/g, "")));
   }
 
-  // 支払い先抽出: 宛名（様/御中/殿を含む行またはその直前行）を除外した発行主の会社名
-  // 発行主は領収書の末尾に記載されることが多いため、条件を満たす最後の行を採用する
-  let paymentDestination: string | null = null;
+  // --- 支払い先 ---
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
   const companyRe = /株式会社|有限会社|合同会社|一般社団法人|協同組合|社団法人|財団法人/;
   const addresseeMarkerRe = /様|御中|殿/;
 
-  // 宛名マーカーを含む行と、その直前行（会社名が別行の場合）をまとめて除外対象とする
   const addresseeIndices = new Set<number>();
   for (let i = 0; i < lines.length; i++) {
     if (addresseeMarkerRe.test(lines[i])) {
@@ -101,98 +91,22 @@ function parseExpenseFromText(rawText: string): ExtractedExpense {
     }
   }
 
-  // 宛名でない会社名行を収集し、最後のものを発行主とする
-  const issuerLines = lines.filter(
-    (line, i) => companyRe.test(line) && !addresseeIndices.has(i)
-  );
-  if (issuerLines.length > 0) {
-    paymentDestination = issuerLines[issuerLines.length - 1];
-  }
-  if (!paymentDestination && lines.length > 0) {
-    paymentDestination = lines.find((_, i) => !addresseeIndices.has(i)) ?? lines[0];
+  const seenDest = new Set<string>();
+  const paymentDestination: string[] = [];
+  const addDest = (line: string) => {
+    if (!seenDest.has(line)) { seenDest.add(line); paymentDestination.push(line); }
+  };
+
+  // 宛名でない会社名行（領収書末尾＝発行主が多いため逆順で優先）
+  const issuerLines = lines.filter((line, i) => companyRe.test(line) && !addresseeIndices.has(i));
+  for (const line of [...issuerLines].reverse()) addDest(line);
+
+  // フォールバック: 先頭から最大5行の非宛名行
+  for (const [i, line] of lines.entries()) {
+    if (!addresseeIndices.has(i) && paymentDestination.length < 5) addDest(line);
   }
 
   return { paymentDate, paymentDestination, amount };
-}
-
-export async function extractExpenseFromAzure(
-  _prevState: ActionState | null,
-  formData: FormData
-): Promise<ActionState> {
-  const endpoint = process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT;
-  const apiKey = process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY;
-
-  if (!endpoint || !apiKey) {
-    return { success: false, error: "Azure Document Intelligence の設定が不足しています（AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT / KEY）" };
-  }
-
-  const file = formData.get("file") as File;
-  if (!file || file.size === 0) {
-    return { success: false, error: "ファイルを選択してください" };
-  }
-
-  const allowedTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/tiff",
-    "image/bmp",
-  ];
-  if (!allowedTypes.includes(file.type)) {
-    return { success: false, error: "PDF・JPEG・PNG・TIFF・BMP 形式に対応しています" };
-  }
-
-  try {
-    const { DocumentAnalysisClient, AzureKeyCredential } = await import("@azure/ai-form-recognizer");
-    const client = new DocumentAnalysisClient(endpoint, new AzureKeyCredential(apiKey));
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const poller = await client.beginAnalyzeDocument("prebuilt-receipt", buffer);
-    const result = await poller.pollUntilDone();
-
-    if (!result.documents || result.documents.length === 0) {
-      return { success: false, error: "領収書の情報を抽出できませんでした" };
-    }
-
-    const fields = result.documents[0].fields;
-
-    // 支払日
-    let paymentDate: string | null = null;
-    const dateField = fields["TransactionDate"];
-    if (dateField?.kind === "date" && dateField.value) {
-      const d = dateField.value;
-      paymentDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-
-    // 支払い先
-    let paymentDestination: string | null = null;
-    const merchantField = fields["MerchantName"];
-    if (merchantField?.kind === "string") {
-      paymentDestination = merchantField.value ?? null;
-    }
-
-    // 金額（通貨フィールド優先、なければ数値フィールド）
-    let amount: string | null = null;
-    const totalField = fields["Total"];
-    if (totalField?.kind === "currency" && totalField.value?.amount !== undefined) {
-      amount = `¥${totalField.value.amount.toLocaleString()}`;
-    } else if (totalField?.kind === "number" && totalField.value !== undefined) {
-      amount = `¥${totalField.value.toLocaleString()}`;
-    }
-
-    return {
-      success: true,
-      data: { paymentDate, paymentDestination, amount },
-    };
-  } catch (error) {
-    console.error("Azure Document Intelligence error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "エラーが発生しました",
-    };
-  }
 }
 
 export async function extractExpenseFromPDF(
@@ -226,11 +140,9 @@ export async function extractExpenseFromPDF(
       };
     }
 
-    const extracted = parseExpenseFromText(text);
-
     return {
       success: true,
-      data: extracted,
+      candidates: parseExpenseFromText(text),
       rawText: text,
     };
   } catch (error) {
