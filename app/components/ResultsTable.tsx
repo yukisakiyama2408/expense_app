@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { extractExpenseFromPDF } from "@/app/actions";
-import { useEntries, type PDFEntry } from "@/app/context/entries";
-
+import { useEntries, type PDFEntry, type ConfirmedEntry } from "@/app/context/entries";
 
 type FieldKey = "paymentDate" | "paymentDestination" | "amount";
 
@@ -38,13 +37,22 @@ function CandidateCell({
   );
 }
 
-function EntryRow({ entry }: { entry: PDFEntry }) {
+function EntryRow({
+  entry,
+  confirmed,
+  onConfirm,
+  onUnconfirm,
+}: {
+  entry: PDFEntry;
+  confirmed: ConfirmedEntry | undefined;
+  onConfirm: (data: ConfirmedEntry) => void;
+  onUnconfirm: () => void;
+}) {
   const [selected, setSelected] = useState<Record<FieldKey, string | null>>({
     paymentDate: null,
     paymentDestination: null,
     amount: null,
   });
-  const [confirmed, setConfirmed] = useState<Record<FieldKey, string | null> | null>(null);
 
   useEffect(() => {
     if (entry.candidates) {
@@ -53,7 +61,6 @@ function EntryRow({ entry }: { entry: PDFEntry }) {
         paymentDestination: entry.candidates.paymentDestination[0] ?? null,
         amount: entry.candidates.amount[0] ?? null,
       });
-      setConfirmed(null);
     }
   }, [entry.candidates]);
 
@@ -93,7 +100,7 @@ function EntryRow({ entry }: { entry: PDFEntry }) {
 
   if (confirmed) {
     return (
-      <tr className="border-b border-zinc-100 dark:border-zinc-800">
+      <tr className="border-b border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/40">
         {fileNameCell}
         {FIELDS.map(({ key }) => (
           <td key={key} className="py-3 pr-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
@@ -102,7 +109,7 @@ function EntryRow({ entry }: { entry: PDFEntry }) {
         ))}
         <td className="py-3 pl-4 pr-4 text-right">
           <button
-            onClick={() => setConfirmed(null)}
+            onClick={onUnconfirm}
             className="whitespace-nowrap text-xs text-zinc-400 underline-offset-2 hover:text-zinc-600 hover:underline dark:text-zinc-500 dark:hover:text-zinc-300"
           >
             変更する
@@ -126,7 +133,15 @@ function EntryRow({ entry }: { entry: PDFEntry }) {
       ))}
       <td className="py-2 pl-4 pr-4 text-right">
         <button
-          onClick={() => setConfirmed(selected)}
+          onClick={() =>
+            onConfirm({
+              id: entry.id,
+              fileName: entry.fileName,
+              paymentDate: selected.paymentDate,
+              paymentDestination: selected.paymentDestination,
+              amount: selected.amount,
+            })
+          }
           className="whitespace-nowrap rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           決定
@@ -137,10 +152,14 @@ function EntryRow({ entry }: { entry: PDFEntry }) {
 }
 
 export function ResultsTable() {
-  const { entries, setEntries } = useEntries();
+  const { entries, setEntries, confirmedMap, confirm, unconfirm } = useEntries();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [inputKey, setInputKey] = useState(0);
+
+  const confirmedCount = Object.keys(confirmedMap).length;
+  const doneCount = entries.filter((e) => e.status === "done").length;
+  const allConfirmed = doneCount > 0 && confirmedCount === doneCount;
 
   const handleAddFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -220,31 +239,51 @@ export function ResultsTable() {
           </thead>
           <tbody>
             {entries.map((entry) => (
-              <EntryRow key={entry.id} entry={entry} />
+              <EntryRow
+                key={entry.id}
+                entry={entry}
+                confirmed={confirmedMap[entry.id]}
+                onConfirm={confirm}
+                onUnconfirm={() => unconfirm(entry.id)}
+              />
             ))}
           </tbody>
         </table>
       </div>
 
-      <div>
-        <input
-          key={inputKey}
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,application/pdf"
-          className="sr-only"
-          onChange={(e) => handleAddFiles(Array.from(e.target.files ?? []))}
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          領収書を追加
-        </button>
+      <div className="flex items-center justify-between">
+        <div>
+          <input
+            key={inputKey}
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,application/pdf"
+            className="sr-only"
+            onChange={(e) => handleAddFiles(Array.from(e.target.files ?? []))}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            領収書を追加
+          </button>
+        </div>
+
+        {allConfirmed && (
+          <button
+            onClick={() => router.push("/confirm")}
+            className="flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            確定
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

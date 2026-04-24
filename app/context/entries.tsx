@@ -11,17 +11,40 @@ export interface PDFEntry {
   error?: string;
 }
 
+export interface ConfirmedEntry {
+  id: string;
+  fileName: string;
+  paymentDate: string | null;
+  paymentDestination: string | null;
+  amount: string | null;
+}
+
 interface EntriesContextType {
   entries: PDFEntry[];
   setEntries: React.Dispatch<React.SetStateAction<PDFEntry[]>>;
+  confirmedMap: Record<string, ConfirmedEntry>;
+  confirm: (entry: ConfirmedEntry) => void;
+  unconfirm: (id: string) => void;
 }
 
 const EntriesContext = createContext<EntriesContextType | null>(null);
 
 export function EntriesProvider({ children }: { children: React.ReactNode }) {
   const [entries, setEntries] = useState<PDFEntry[]>([]);
+  const [confirmedMap, setConfirmedMap] = useState<Record<string, ConfirmedEntry>>({});
+
+  const confirm = (entry: ConfirmedEntry) =>
+    setConfirmedMap((prev) => ({ ...prev, [entry.id]: entry }));
+
+  const unconfirm = (id: string) =>
+    setConfirmedMap((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+
   return (
-    <EntriesContext.Provider value={{ entries, setEntries }}>
+    <EntriesContext.Provider value={{ entries, setEntries, confirmedMap, confirm, unconfirm }}>
       {children}
     </EntriesContext.Provider>
   );
