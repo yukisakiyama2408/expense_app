@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { extractExpenseFromPDF } from "@/app/actions";
 import { useEntries, type PDFEntry } from "@/app/context/entries";
 
 
@@ -136,8 +137,52 @@ function EntryRow({ entry }: { entry: PDFEntry }) {
 }
 
 export function ResultsTable() {
-  const { entries } = useEntries();
+  const { entries, setEntries } = useEntries();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [inputKey, setInputKey] = useState(0);
+
+  const handleAddFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    setInputKey((k) => k + 1);
+
+    const newEntries: PDFEntry[] = files.map((file) => ({
+      id: crypto.randomUUID(),
+      fileName: file.name,
+      status: "processing",
+    }));
+
+    setEntries((prev) => [...prev, ...newEntries]);
+
+    await Promise.all(
+      files.map(async (file, i) => {
+        const id = newEntries[i].id;
+        const formData = new FormData();
+        formData.append("pdf", file);
+        try {
+          const result = await extractExpenseFromPDF(null, formData);
+          setEntries((prev) =>
+            prev.map((e) =>
+              e.id === id
+                ? {
+                    ...e,
+                    status: result.success ? "done" : "error",
+                    candidates: result.candidates,
+                    error: result.error,
+                  }
+                : e
+            )
+          );
+        } catch {
+          setEntries((prev) =>
+            prev.map((e) =>
+              e.id === id ? { ...e, status: "error", error: "エラーが発生しました" } : e
+            )
+          );
+        }
+      })
+    );
+  };
 
   if (entries.length === 0) {
     return (
@@ -154,30 +199,53 @@ export function ResultsTable() {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-      <table className="w-full min-w-[720px] border-collapse bg-white text-left dark:bg-zinc-900">
-        <thead>
-          <tr className="border-b border-zinc-200 dark:border-zinc-800">
-            <th className="w-[20%] py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              ファイル名
-            </th>
-            {FIELDS.map(({ key, label }) => (
-              <th
-                key={key}
-                className="w-[25%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
-              >
-                {label}
+    <div className="space-y-4">
+      <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <table className="w-full min-w-[720px] border-collapse bg-white text-left dark:bg-zinc-900">
+          <thead>
+            <tr className="border-b border-zinc-200 dark:border-zinc-800">
+              <th className="w-[20%] py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                ファイル名
               </th>
+              {FIELDS.map(({ key, label }) => (
+                <th
+                  key={key}
+                  className="w-[25%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                >
+                  {label}
+                </th>
+              ))}
+              <th className="w-[5%] py-3 pr-4" />
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => (
+              <EntryRow key={entry.id} entry={entry} />
             ))}
-            <th className="w-[5%] py-3 pr-4" />
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <EntryRow key={entry.id} entry={entry} />
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <input
+          key={inputKey}
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,application/pdf"
+          className="sr-only"
+          onChange={(e) => handleAddFiles(Array.from(e.target.files ?? []))}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          領収書を追加
+        </button>
+      </div>
     </div>
   );
 }
