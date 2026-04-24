@@ -30,6 +30,12 @@ function SubmitButton() {
 
 type FieldKey = "paymentDate" | "paymentDestination" | "amount";
 
+const FIELDS: { key: FieldKey; label: string }[] = [
+  { key: "paymentDate", label: "支払日" },
+  { key: "paymentDestination", label: "支払い先" },
+  { key: "amount", label: "金額" },
+];
+
 function CandidateField({
   label,
   candidates,
@@ -74,12 +80,48 @@ function CandidateField({
   );
 }
 
+function ConfirmedCard({
+  confirmed,
+  onEdit,
+}: {
+  confirmed: Record<FieldKey, string | null>;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">確定データ</h2>
+        <button
+          onClick={onEdit}
+          className="text-xs text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200"
+        >
+          変更する
+        </button>
+      </div>
+      <dl className="space-y-3">
+        {FIELDS.map(({ key, label }) => (
+          <div
+            key={key}
+            className="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 last:border-0 last:pb-0 dark:border-zinc-800"
+          >
+            <dt className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{label}</dt>
+            <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              {confirmed[key] ?? <span className="font-normal text-zinc-400">不明</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function CandidateSelector({ candidates }: { candidates: ExtractedExpenseCandidates }) {
   const [selected, setSelected] = useState<Record<FieldKey, string | null>>({
     paymentDate: candidates.paymentDate[0] ?? null,
     paymentDestination: candidates.paymentDestination[0] ?? null,
     amount: candidates.amount[0] ?? null,
   });
+  const [confirmed, setConfirmed] = useState<Record<FieldKey, string | null> | null>(null);
 
   useEffect(() => {
     setSelected({
@@ -87,19 +129,18 @@ function CandidateSelector({ candidates }: { candidates: ExtractedExpenseCandida
       paymentDestination: candidates.paymentDestination[0] ?? null,
       amount: candidates.amount[0] ?? null,
     });
+    setConfirmed(null);
   }, [candidates]);
 
-  const fields: { key: FieldKey; label: string }[] = [
-    { key: "paymentDate", label: "支払日" },
-    { key: "paymentDestination", label: "支払い先" },
-    { key: "amount", label: "金額" },
-  ];
+  if (confirmed) {
+    return <ConfirmedCard confirmed={confirmed} onEdit={() => setConfirmed(null)} />;
+  }
 
   return (
     <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">抽出結果</h2>
       <dl className="space-y-4">
-        {fields.map(({ key, label }) => (
+        {FIELDS.map(({ key, label }) => (
           <CandidateField
             key={key}
             label={label}
@@ -109,6 +150,12 @@ function CandidateSelector({ candidates }: { candidates: ExtractedExpenseCandida
           />
         ))}
       </dl>
+      <button
+        onClick={() => setConfirmed(selected)}
+        className="mt-6 flex h-10 w-full items-center justify-center rounded-lg bg-zinc-900 px-6 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+      >
+        決定
+      </button>
     </div>
   );
 }
