@@ -17,6 +17,7 @@ export interface ConfirmedEntry {
   paymentDate: string | null;
   paymentDestination: string | null;
   amount: string | null;
+  accountItem: string;
 }
 
 interface EntriesContextType {

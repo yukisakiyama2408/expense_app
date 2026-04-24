@@ -51,20 +51,19 @@ export function ConfirmTable() {
     );
   }
 
-  const columns = [
+  const staticColumns = [
     { key: "paymentDate" as const, label: "支払日" },
     { key: "paymentDestination" as const, label: "支払い先" },
     { key: "amount" as const, label: "金額" },
-    { key: "fileName" as const, label: "ファイル名" },
   ];
 
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <table className="w-full min-w-[640px] border-collapse bg-white text-left dark:bg-zinc-900">
+        <table className="w-full min-w-[800px] border-collapse bg-white text-left dark:bg-zinc-900">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              {columns.map(({ key, label }) => (
+              {staticColumns.map(({ key, label }) => (
                 <th
                   key={key}
                   className="py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
@@ -72,16 +71,28 @@ export function ConfirmTable() {
                   {label}
                 </th>
               ))}
+              <th className="py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                勘定項目
+              </th>
+              <th className="py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                ファイル名
+              </th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((entry) => (
               <tr key={entry.id} className="border-b border-zinc-100 last:border-0 dark:border-zinc-800">
-                {columns.map(({ key }) => (
+                {staticColumns.map(({ key }) => (
                   <td key={key} className="py-3 pl-4 pr-4 text-sm text-zinc-900 dark:text-zinc-50">
                     {entry[key] ?? <span className="text-zinc-400">不明</span>}
                   </td>
                 ))}
+                <td className="py-3 pl-4 pr-4 text-sm text-zinc-900 dark:text-zinc-50">
+                  {entry.accountItem}
+                </td>
+                <td className="py-3 pl-4 pr-4 text-sm text-zinc-900 dark:text-zinc-50">
+                  {entry.fileName}
+                </td>
               </tr>
             ))}
           </tbody>

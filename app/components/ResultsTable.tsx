@@ -13,6 +13,21 @@ const FIELDS: { key: FieldKey; label: string }[] = [
   { key: "amount", label: "金額" },
 ];
 
+const ACCOUNT_ITEMS = [
+  "飛行機",
+  "宿泊",
+  "食事代",
+  "電車・バス",
+  "タクシー",
+  "駐車場・高速料金",
+  "会議費",
+  "交際費",
+  "消耗品費",
+  "新聞図書費",
+  "通信費",
+  "その他",
+] as const;
+
 function CandidateCell({
   candidates,
   selected,
@@ -66,6 +81,7 @@ function EntryRow({
     paymentDestination: null,
     amount: null,
   });
+  const [accountItem, setAccountItem] = useState<string>("その他");
 
   useEffect(() => {
     if (entry.candidates) {
@@ -126,6 +142,9 @@ function EntryRow({
             {confirmed[key] ?? <span className="font-normal text-zinc-400">不明</span>}
           </td>
         ))}
+        <td className="py-3 pr-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          {confirmed.accountItem}
+        </td>
         <td className="py-3 pl-4 pr-4 text-right">
           <button
             onClick={onUnconfirm}
@@ -151,6 +170,17 @@ function EntryRow({
           />
         </td>
       ))}
+      <td className="py-2 pr-4">
+        <select
+          value={accountItem}
+          onChange={(e) => setAccountItem(e.target.value)}
+          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:ring-zinc-400"
+        >
+          {ACCOUNT_ITEMS.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
+      </td>
       <td className="py-2 pl-4 pr-4 text-right">
         <button
           onClick={() =>
@@ -160,6 +190,7 @@ function EntryRow({
               paymentDate: selected.paymentDate,
               paymentDestination: selected.paymentDestination,
               amount: selected.amount,
+              accountItem,
             })
           }
           className="whitespace-nowrap rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
@@ -250,11 +281,14 @@ export function ResultsTable() {
               {FIELDS.map(({ key, label }) => (
                 <th
                   key={key}
-                  className="w-[25%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                  className="w-[18%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
                 >
                   {label}
                 </th>
               ))}
+              <th className="w-[18%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                勘定項目
+              </th>
               <th className="w-[5%] py-3 pr-4" />
             </tr>
           </thead>

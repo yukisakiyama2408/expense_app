@@ -7,7 +7,24 @@ interface ConfirmedEntry {
   paymentDate: string | null;
   paymentDestination: string | null;
   amount: string | null;
+  accountItem?: string;
 }
+
+// 勘定項目 → 列番号 (1-indexed, F=6 〜 Q=17)
+const ACCOUNT_ITEM_COL: Record<string, number> = {
+  "飛行機": 6,
+  "宿泊": 7,
+  "食事代": 8,
+  "電車・バス": 9,
+  "タクシー": 10,
+  "駐車場・高速料金": 11,
+  "会議費": 12,
+  "交際費": 13,
+  "消耗品費": 14,
+  "新聞図書費": 15,
+  "通信費": 16,
+  "その他": 17,
+};
 
 function parseAmount(amount: string | null): number {
   if (!amount) return 0;
@@ -217,9 +234,9 @@ export async function POST(req: NextRequest) {
       cell.alignment = RIGHT;
       cell.font = { size: 9 };
     }
-    // その他 (Q=17) に金額
-    if (amount) {
-      row.getCell(17).value = amount;
+    if (amount && entry) {
+      const colIdx = ACCOUNT_ITEM_COL[entry.accountItem ?? "その他"] ?? 17;
+      row.getCell(colIdx).value = amount;
     }
 
     // 合計 (R=18)
@@ -241,7 +258,8 @@ export async function POST(req: NextRequest) {
 
   const colTotals: number[] = new Array(18).fill(0);
   for (const entry of entries) {
-    colTotals[16] += parseAmount(entry.amount); // その他(17列目, 0-indexed:16)
+    const colIdx = ACCOUNT_ITEM_COL[entry.accountItem ?? "その他"] ?? 17;
+    colTotals[colIdx - 1] += parseAmount(entry.amount);
     colTotals[17] += parseAmount(entry.amount); // 合計(18列目, 0-indexed:17)
   }
 
