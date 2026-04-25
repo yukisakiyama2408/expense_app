@@ -4,7 +4,7 @@ import { ConfirmTable } from "@/app/components/ConfirmTable";
 export default function ConfirmPage() {
   return (
     <div className="min-h-screen bg-zinc-50 px-4 py-10 dark:bg-zinc-950">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-screen-xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
