@@ -82,6 +82,7 @@ function EntryRow({
     amount: null,
   });
   const [accountItem, setAccountItem] = useState<string>("その他");
+  const [purpose, setPurpose] = useState<string>("");
 
   useEffect(() => {
     if (entry.candidates) {
@@ -103,7 +104,7 @@ function EntryRow({
     return (
       <tr className="border-b border-zinc-100 dark:border-zinc-800">
         {fileNameCell}
-        <td colSpan={FIELDS.length} className="py-3 text-sm text-zinc-400">
+        <td colSpan={FIELDS.length + 2} className="py-3 text-sm text-zinc-400">
           <span className="flex items-center gap-2">
             <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -123,7 +124,7 @@ function EntryRow({
     return (
       <tr className="border-b border-zinc-100 dark:border-zinc-800">
         {fileNameCell}
-        <td colSpan={FIELDS.length} className="py-3 text-sm text-red-600 dark:text-red-400">
+        <td colSpan={FIELDS.length + 2} className="py-3 text-sm text-red-600 dark:text-red-400">
           {entry.error ?? "エラーが発生しました"}
         </td>
         <td className="py-3 pl-4 pr-4 text-right">
@@ -144,6 +145,9 @@ function EntryRow({
         ))}
         <td className="py-3 pr-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
           {confirmed.accountItem}
+        </td>
+        <td className="py-3 pr-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          {confirmed.purpose || <span className="font-normal text-zinc-400">—</span>}
         </td>
         <td className="py-3 pl-4 pr-4 text-right">
           <button
@@ -181,6 +185,15 @@ function EntryRow({
           ))}
         </select>
       </td>
+      <td className="py-2 pr-4">
+        <input
+          type="text"
+          value={purpose}
+          onChange={(e) => setPurpose(e.target.value)}
+          placeholder="目的・同席者・目的地 など"
+          className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-400"
+        />
+      </td>
       <td className="py-2 pl-4 pr-4 text-right">
         <button
           onClick={() =>
@@ -191,6 +204,7 @@ function EntryRow({
               paymentDestination: selected.paymentDestination,
               amount: selected.amount,
               accountItem,
+              purpose,
             })
           }
           className="whitespace-nowrap rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
@@ -272,24 +286,27 @@ export function ResultsTable() {
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <table className="w-full min-w-[720px] border-collapse bg-white text-left dark:bg-zinc-900">
+        <table className="w-full min-w-[820px] border-collapse bg-white text-left dark:bg-zinc-900">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              <th className="w-[20%] py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <th className="w-[16%] py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 ファイル名
               </th>
               {FIELDS.map(({ key, label }) => (
                 <th
                   key={key}
-                  className="w-[18%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                  className="w-[11%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
                 >
                   {label}
                 </th>
               ))}
-              <th className="w-[18%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <th className="w-[12%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 勘定項目
               </th>
-              <th className="w-[5%] py-3 pr-4" />
+              <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                目的・同席者・目的地 など
+              </th>
+              <th className="w-[9%] py-3 pr-4" />
             </tr>
           </thead>
           <tbody>

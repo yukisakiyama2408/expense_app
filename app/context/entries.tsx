@@ -18,6 +18,7 @@ export interface ConfirmedEntry {
   paymentDestination: string | null;
   amount: string | null;
   accountItem: string;
+  purpose: string;
 }
 
 export interface SelectedMonth {

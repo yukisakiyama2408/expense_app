@@ -8,6 +8,7 @@ interface ConfirmedEntry {
   paymentDestination: string | null;
   amount: string | null;
   accountItem?: string;
+  purpose?: string;
 }
 
 // 勘定項目 → 列番号 (1-indexed, F=6 〜 Q=17)
@@ -225,7 +226,10 @@ export async function POST(req: NextRequest) {
     payeeCell.font = { size: 9 };
 
     // 目的
-    row.getCell(5).alignment = LEFT;
+    const purposeCell = row.getCell(5);
+    purposeCell.value = entry?.purpose ?? "";
+    purposeCell.alignment = LEFT;
+    purposeCell.font = { size: 9 };
 
     // 金額列 F〜Q (F=6, Q=17)
     for (let c = 6; c <= 17; c++) {

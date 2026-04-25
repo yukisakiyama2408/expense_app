@@ -75,6 +75,9 @@ export function ConfirmTable() {
                 勘定項目
               </th>
               <th className="py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                目的・同席者・目的地 など
+              </th>
+              <th className="py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 ファイル名
               </th>
             </tr>
@@ -89,6 +92,9 @@ export function ConfirmTable() {
                 ))}
                 <td className="py-3 pl-4 pr-4 text-sm text-zinc-900 dark:text-zinc-50">
                   {entry.accountItem}
+                </td>
+                <td className="py-3 pl-4 pr-4 text-sm text-zinc-900 dark:text-zinc-50">
+                  {entry.purpose || <span className="text-zinc-400">—</span>}
                 </td>
                 <td className="py-3 pl-4 pr-4 text-sm text-zinc-900 dark:text-zinc-50">
                   {entry.fileName}
