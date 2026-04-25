@@ -1,4 +1,4 @@
-import { UploadForm } from "@/app/components/UploadForm";
+import { MonthSelector } from "@/app/components/MonthSelector";
 
 export default function Home() {
   return (
@@ -6,13 +6,13 @@ export default function Home() {
       <main className="w-full max-w-md">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            領収書スキャナ
+            経費精算
           </h1>
           <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            PDFをアップロードして、支払日・支払い先・金額を自動抽出します
+            精算する月を選択してください
           </p>
         </div>
-        <UploadForm />
+        <MonthSelector />
       </main>
     </div>
   );

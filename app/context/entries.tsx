@@ -20,12 +20,19 @@ export interface ConfirmedEntry {
   accountItem: string;
 }
 
+export interface SelectedMonth {
+  year: number;
+  month: number;
+}
+
 interface EntriesContextType {
   entries: PDFEntry[];
   setEntries: React.Dispatch<React.SetStateAction<PDFEntry[]>>;
   confirmedMap: Record<string, ConfirmedEntry>;
   confirm: (entry: ConfirmedEntry) => void;
   unconfirm: (id: string) => void;
+  selectedMonth: SelectedMonth | null;
+  setSelectedMonth: (month: SelectedMonth | null) => void;
 }
 
 const EntriesContext = createContext<EntriesContextType | null>(null);
@@ -33,6 +40,7 @@ const EntriesContext = createContext<EntriesContextType | null>(null);
 export function EntriesProvider({ children }: { children: React.ReactNode }) {
   const [entries, setEntries] = useState<PDFEntry[]>([]);
   const [confirmedMap, setConfirmedMap] = useState<Record<string, ConfirmedEntry>>({});
+  const [selectedMonth, setSelectedMonth] = useState<SelectedMonth | null>(null);
 
   const confirm = (entry: ConfirmedEntry) =>
     setConfirmedMap((prev) => ({ ...prev, [entry.id]: entry }));
@@ -45,7 +53,7 @@ export function EntriesProvider({ children }: { children: React.ReactNode }) {
     });
 
   return (
-    <EntriesContext.Provider value={{ entries, setEntries, confirmedMap, confirm, unconfirm }}>
+    <EntriesContext.Provider value={{ entries, setEntries, confirmedMap, confirm, unconfirm, selectedMonth, setSelectedMonth }}>
       {children}
     </EntriesContext.Provider>
   );
