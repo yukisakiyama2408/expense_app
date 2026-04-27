@@ -15,6 +15,9 @@ function parseAmount(amount: string | null): number {
 function fmt(n: number): string {
   return n > 0 ? n.toLocaleString() : "";
 }
+function toFullwidth(n: number): string {
+  return String(n).replace(/[0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0));
+}
 
 // ── スタイル定数 ──────────────────────────────────────────────────
 // メタデータセクション: フォームスタイル (ラベルは装飾なし、入力は下線のみ)
@@ -24,12 +27,12 @@ const META_VAL_UD = "border-y border-zinc-500 px-1 py-0.5 text-[10px] text-zinc-
 const META_BLANK = "py-0.5";
 
 // データテーブルセクション: thin top/bottom + hair left/right
-const B_DATA = "border-t border-b border-l border-zinc-300 dark:border-zinc-600";
-const TH1 = "border-t border-l border-zinc-300 bg-[#D9E1F2] px-0.5 py-1 text-center text-[8px] font-bold leading-tight text-zinc-800 dark:bg-blue-900/50 dark:border-zinc-600 dark:text-zinc-100";
-const TH2 = "border-t border-b border-l border-zinc-300 bg-[#DAE8FC] px-0.5 py-1 text-center text-[8px] leading-tight text-zinc-800 dark:bg-blue-800/40 dark:border-zinc-600 dark:text-zinc-100";
+const B_DATA = "border-t border-b border-l border-zinc-500 dark:border-zinc-500";
+const TH1 = "border-t border-l border-zinc-500 px-0.5 py-1 text-center text-[8px] font-bold leading-tight text-zinc-800 dark:border-zinc-500 dark:text-zinc-100";
+const TH2 = "border-t border-b border-l border-zinc-500 px-0.5 py-1 text-center text-[8px] leading-tight text-zinc-800 dark:border-zinc-500 dark:text-zinc-100";
 const TD  = `${B_DATA} px-1 py-0.5 text-[10px] text-zinc-900 dark:text-zinc-50`;
 const TDN = `${B_DATA} px-1 py-0.5 text-right text-[10px] tabular-nums text-zinc-900 dark:text-zinc-50`;
-const TDS = `${B_DATA} bg-zinc-50 px-1 py-0.5 text-right text-[10px] font-semibold tabular-nums dark:bg-zinc-800 dark:text-zinc-50`;
+const TDS = `${B_DATA} px-1 py-0.5 text-right text-[10px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-50`;
 
 const INPUT = "w-full bg-transparent text-[10px] focus:outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500";
 
@@ -42,8 +45,8 @@ export function ConfirmTable() {
   const [name, setName]               = useState("");
   const [department, setDepartment]   = useState("");
   const [employeeId, setEmployeeId]   = useState("");
-  const [approver, setApprover]       = useState("");
-  const [accountant, setAccountant]   = useState("");
+  const [approver, setApprover]       = useState("菅野龍彦");
+  const [accountant, setAccountant]   = useState("北埜順子");
 
   const sorted = Object.values(confirmedMap).sort((a, b) => {
     if (!a.paymentDate && !b.paymentDate) return 0;
@@ -69,10 +72,10 @@ export function ConfirmTable() {
   const today = new Date().toLocaleDateString("ja-JP", {
     year: "numeric", month: "2-digit", day: "2-digit",
   });
-  const dates = sorted.map((e) => e.paymentDate).filter(Boolean).sort() as string[];
-  const periodStart = dates[0]
-    ?? (selectedMonth ? `${selectedMonth.year}/${String(selectedMonth.month).padStart(2, "0")}/01` : "");
-  const periodEnd = dates[dates.length - 1] ?? "";
+  const periodStart = selectedMonth ? `${selectedMonth.year}/${selectedMonth.month}/1` : "";
+  const periodEnd = selectedMonth
+    ? `${selectedMonth.year}/${selectedMonth.month}/${new Date(selectedMonth.year, selectedMonth.month, 0).getDate()}`
+    : "";
 
   const colTotals: Record<string, number> = Object.fromEntries(ALL_ITEMS.map((k) => [k, 0]));
   for (const entry of sorted) {
@@ -209,9 +212,9 @@ export function ConfirmTable() {
               {/* ── ヘッダー Row 10 ── */}
               <tr>
                 <th rowSpan={2} className={TH1}>確認</th>
-                <th rowSpan={2} className={TH1}>No.</th>
+                <th rowSpan={2} className={TH1}>領収書<br />No.</th>
                 <th rowSpan={2} className={TH1}>日　付</th>
-                <th rowSpan={2} className={TH1}>CC</th>
+                <th rowSpan={2} className={TH1}>チャージ<br />コード</th>
                 <th rowSpan={2} className={TH1}>支払先・内容</th>
                 <th rowSpan={2} className={TH1}>目的・同席者・目的地　など</th>
                 <th colSpan={6} className={`${TH1} border-b border-zinc-200 dark:border-zinc-500`}>旅費交通費</th>
@@ -239,8 +242,8 @@ export function ConfirmTable() {
                 return (
                   <tr key={i}>
                     <td className={`${TD} text-center`} />
-                    <td className={`${TD} text-center`}>{i + 1}</td>
-                    <td className={`${TD} whitespace-nowrap text-center`}>{entry?.paymentDate ?? ""}</td>
+                    <td className={`${TD} text-center`}>{toFullwidth(i + 1)}</td>
+                    <td className={`${TD} whitespace-nowrap text-center`}>{entry?.paymentDate ? `${parseInt(entry.paymentDate.slice(5, 7))}/${parseInt(entry.paymentDate.slice(8))}` : ""}</td>
                     <td className={TD} />
                     <td className={TD}>{entry?.paymentDestination ?? ""}</td>
                     <td className={TD}>{entry?.purpose ?? ""}</td>
@@ -256,22 +259,22 @@ export function ConfirmTable() {
 
               {/* ── 小計行 ── */}
               <tr>
-                <td colSpan={6} className={`${TDS} border-t-2 border-t-zinc-400`} />
+                <td colSpan={6} className={`${TDS} border-t-2 border-t-zinc-600`} />
                 {ALL_ITEMS.map((item) => (
-                  <td key={item} className={`${TDS} border-t-2 border-t-zinc-400`}>
+                  <td key={item} className={`${TDS} border-t-2 border-t-zinc-600`}>
                     {fmt(colTotals[item])}
                   </td>
                 ))}
-                <td className={`${TDS} border-t-2 border-t-zinc-400`} />
+                <td className={`${TDS} border-t-2 border-t-zinc-600`} />
               </tr>
 
               {/* ── 経費清算合計 (T-U: ラベル, V: 値) ── */}
               <tr>
                 <td colSpan={16} className="py-0.5" />
-                <td colSpan={2} className="border-t border-zinc-300 py-0.5 pr-1 text-right text-[10px] font-bold text-zinc-900 dark:border-zinc-600 dark:text-zinc-50">
+                <td colSpan={2} className="border-t border-zinc-500 py-0.5 pr-1 text-right text-[10px] font-bold text-zinc-900 dark:border-zinc-500 dark:text-zinc-50">
                   経費清算合計
                 </td>
-                <td className="border-2 border-zinc-600 px-1 py-0.5 text-right text-[10px] font-bold tabular-nums text-zinc-900 dark:border-zinc-400 dark:text-zinc-50">
+                <td className="border-2 border-zinc-800 px-1 py-0.5 text-right text-[10px] font-bold tabular-nums text-zinc-900 dark:border-zinc-300 dark:text-zinc-50">
                   {fmt(grandTotal)}
                 </td>
               </tr>

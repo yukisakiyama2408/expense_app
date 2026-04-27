@@ -224,8 +224,7 @@ export function ResultsTable() {
   const [inputKey, setInputKey] = useState(0);
 
   const confirmedCount = Object.keys(confirmedMap).length;
-  const doneCount = entries.filter((e) => e.status === "done").length;
-  const allConfirmed = doneCount > 0 && confirmedCount === doneCount;
+  const hasConfirmed = confirmedCount > 0;
 
   const handleAddFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -349,7 +348,7 @@ export function ResultsTable() {
           </button>
         </div>
 
-        {allConfirmed && (
+        {hasConfirmed && (
           <button
             onClick={() => router.push("/confirm")}
             className="flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"

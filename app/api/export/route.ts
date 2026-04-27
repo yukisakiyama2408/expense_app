@@ -156,9 +156,8 @@ export async function POST(req: NextRequest) {
   ws.getCell("J6").alignment = LEFT;
 
   ws.mergeCells("K6:L6");
-  ws.getCell("K6").value = new Date().toLocaleDateString("ja-JP", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-  });
+  ws.getCell("K6").value = { formula: "TODAY()", date1904: false };
+  ws.getCell("K6").numFmt = "yyyy/m/d";
   ws.getCell("K6").alignment = LEFT;
   ws.getCell("K6").border = metaValBorders();
 
