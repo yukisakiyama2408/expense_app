@@ -91,7 +91,7 @@ export function ConfirmTable() {
       const res = await fetch("/api/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries: sorted, name, department, employeeId, approver, accountant }),
+        body: JSON.stringify({ entries: sorted, name, department, employeeId, approver, accountant, selectedMonth }),
       });
       if (!res.ok) throw new Error("export failed");
       const blob = await res.blob();
