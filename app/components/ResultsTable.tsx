@@ -94,17 +94,10 @@ function EntryRow({
     }
   }, [entry.candidates]);
 
-  const fileNameCell = (
-    <td className="py-3 pl-4 pr-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
-      {entry.fileName}
-    </td>
-  );
-
   if (entry.status === "processing") {
     return (
       <tr className="border-b border-zinc-100 dark:border-zinc-800">
-        {fileNameCell}
-        <td colSpan={FIELDS.length + 2} className="py-3 text-sm text-zinc-400">
+        <td colSpan={FIELDS.length + 2} className="py-3 pl-4 text-sm text-zinc-400">
           <span className="flex items-center gap-2">
             <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -123,8 +116,7 @@ function EntryRow({
   if (entry.status === "error") {
     return (
       <tr className="border-b border-zinc-100 dark:border-zinc-800">
-        {fileNameCell}
-        <td colSpan={FIELDS.length + 2} className="py-3 text-sm text-red-600 dark:text-red-400">
+        <td colSpan={FIELDS.length + 2} className="py-3 pl-4 text-sm text-red-600 dark:text-red-400">
           {entry.error ?? "エラーが発生しました"}
         </td>
         <td className="py-3 pl-4 pr-4 text-right">
@@ -137,7 +129,6 @@ function EntryRow({
   if (confirmed) {
     return (
       <tr className="border-b border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/40">
-        {fileNameCell}
         {FIELDS.map(({ key }) => (
           <td key={key} className="py-3 pr-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
             {confirmed[key] ?? <span className="font-normal text-zinc-400">不明</span>}
@@ -164,7 +155,6 @@ function EntryRow({
 
   return (
     <tr className="border-b border-zinc-100 dark:border-zinc-800">
-      {fileNameCell}
       {FIELDS.map(({ key }) => (
         <td key={key} className="py-2 pr-4">
           <CandidateCell
@@ -285,27 +275,25 @@ export function ResultsTable() {
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <table className="w-full min-w-[820px] border-collapse bg-white text-left dark:bg-zinc-900">
+        <table className="w-full min-w-[960px] border-collapse bg-white text-left dark:bg-zinc-900">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
               <th className="w-[16%] py-3 pl-4 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                ファイル名
+                支払日
               </th>
-              {FIELDS.map(({ key, label }) => (
-                <th
-                  key={key}
-                  className="w-[11%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
-                >
-                  {label}
-                </th>
-              ))}
-              <th className="w-[12%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <th className="w-[20%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                支払い先
+              </th>
+              <th className="w-[13%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                金額
+              </th>
+              <th className="w-[15%] py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 勘定項目
               </th>
               <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 目的・同席者・目的地 など
               </th>
-              <th className="w-[9%] py-3 pr-4" />
+              <th className="w-[10%] py-3 pr-4" />
             </tr>
           </thead>
           <tbody>
