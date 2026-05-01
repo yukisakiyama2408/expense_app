@@ -258,12 +258,15 @@ function EntryRow({
 }
 
 export function ResultsTable() {
-  const { entries, setEntries, confirmedMap, confirm, unconfirm } = useEntries();
+  const { entries, setEntries, confirmedMap, confirm, unconfirm, setUserName } = useEntries();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [inputKey, setInputKey] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [modalName, setModalName] = useState("");
 
   const confirmedCount = Object.keys(confirmedMap).length;
   const hasConfirmed = confirmedCount > 0;
@@ -432,7 +435,7 @@ export function ResultsTable() {
 
         {hasConfirmed && (
           <button
-            onClick={() => router.push("/confirm")}
+            onClick={() => { setModalName(""); setShowNameModal(true); }}
             className="flex items-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             確定
@@ -442,6 +445,45 @@ export function ResultsTable() {
           </button>
         )}
       </div>
+
+      {showNameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+            <h2 className="mb-1 text-base font-semibold text-zinc-900 dark:text-zinc-50">氏名を入力してください</h2>
+            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">確認ページの氏名欄に反映されます</p>
+            <input
+              ref={nameInputRef}
+              type="text"
+              value={modalName}
+              onChange={(e) => setModalName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { setUserName(modalName); router.push("/confirm"); }
+                if (e.key === "Escape") setShowNameModal(false);
+              }}
+              autoFocus
+              placeholder="山田 太郎"
+              className="mb-4 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-400"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowNameModal(false)}
+                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => { setUserName(modalName); router.push("/confirm"); }}
+                className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                確定
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

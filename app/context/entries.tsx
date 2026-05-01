@@ -34,6 +34,8 @@ interface EntriesContextType {
   unconfirm: (id: string) => void;
   selectedMonth: SelectedMonth | null;
   setSelectedMonth: (month: SelectedMonth | null) => void;
+  userName: string;
+  setUserName: (name: string) => void;
 }
 
 const EntriesContext = createContext<EntriesContextType | null>(null);
@@ -42,6 +44,7 @@ export function EntriesProvider({ children }: { children: React.ReactNode }) {
   const [entries, setEntries] = useState<PDFEntry[]>([]);
   const [confirmedMap, setConfirmedMap] = useState<Record<string, ConfirmedEntry>>({});
   const [selectedMonth, setSelectedMonth] = useState<SelectedMonth | null>(null);
+  const [userName, setUserName] = useState<string>("");
 
   const confirm = (entry: ConfirmedEntry) =>
     setConfirmedMap((prev) => ({ ...prev, [entry.id]: entry }));
@@ -54,7 +57,7 @@ export function EntriesProvider({ children }: { children: React.ReactNode }) {
     });
 
   return (
-    <EntriesContext.Provider value={{ entries, setEntries, confirmedMap, confirm, unconfirm, selectedMonth, setSelectedMonth }}>
+    <EntriesContext.Provider value={{ entries, setEntries, confirmedMap, confirm, unconfirm, selectedMonth, setSelectedMonth, userName, setUserName }}>
       {children}
     </EntriesContext.Provider>
   );

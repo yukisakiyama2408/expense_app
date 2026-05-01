@@ -39,10 +39,10 @@ const INPUT = "w-full bg-transparent text-[10px] focus:outline-none placeholder:
 const MAX_ROWS = 18;
 
 export function ConfirmTable() {
-  const { confirmedMap, selectedMonth } = useEntries();
+  const { confirmedMap, selectedMonth, userName } = useEntries();
   const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
-  const [name, setName]               = useState("");
+  const [name, setName]               = useState(userName);
   const [department, setDepartment]   = useState("");
   const [employeeId, setEmployeeId]   = useState("");
   const [approver, setApprover]       = useState("菅野龍彦");
