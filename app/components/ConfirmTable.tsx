@@ -43,6 +43,11 @@ export function ConfirmTable() {
   const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
   const [name, setName]               = useState(userName);
+
+  const defaultFileName = selectedMonth
+    ? `${selectedMonth.year}_経費申請${selectedMonth.month}月${userName ? `_${userName}` : ""}`
+    : "経費精算申請書";
+  const [fileName, setFileName] = useState(defaultFileName);
   const [department, setDepartment]   = useState("");
   const [employeeId, setEmployeeId]   = useState("");
   const [approver, setApprover]       = useState("菅野龍彦");
@@ -98,7 +103,7 @@ export function ConfirmTable() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "経費精算申請書.xlsx";
+      a.download = `${fileName || "経費精算申請書"}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -296,7 +301,16 @@ export function ConfirmTable() {
       </div>
 
       {/* Excelエクスポートボタン */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center gap-1.5">
+          <input
+            type="text"
+            value={fileName}
+            onChange={(e) => setFileName(e.target.value)}
+            className="w-64 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:ring-zinc-400"
+          />
+          <span className="text-sm text-zinc-500">.xlsx</span>
+        </div>
         <button
           onClick={handleExport}
           disabled={isExporting}
